@@ -35,7 +35,8 @@ for (const r of MAP.rowOrder) {
 
 const AMBIENT_CYCLE_MS = 1800; // one gentle play-through of an ambient (petState) animation
 const ONESHOT_CYCLE_MS = 1100; // celebrate / alert / waving play-through
-const IDLE_REANIM_MS = 5 * 60 * 1000; // ambient holds still, replays one cycle every ~5 min
+const IDLE_REANIM_MS = 5 * 60 * 1000; // ambient replays one full cycle every ~5 min (a "stretch")
+const BREATH_FRAME_MS = 800; // gentle idle: hold each of the last two frames ~0.8s
 const DISPLAY_H = 150; // on-screen height of one cell (px)
 
 // ── Endpoints (all via Tauri http plugin → no browser CORS) ──────────────────
@@ -125,6 +126,24 @@ function playLoop(row: number, cycleMs: number) {
     showCell(row, i);
   }, frameMs);
 }
+// Gentle idle: slowly loop the last two frames so the pet "breathes" instead of
+// freezing on one frame (avoids both the stiff hold and the busy full loop).
+function breathe(row: number) {
+  stopFrames();
+  const frames = FRAMES_BY_ROW[row] || 1;
+  if (frames <= 1) {
+    showCell(row, 0);
+    return;
+  }
+  const a = frames - 2 >= 0 ? frames - 2 : 0;
+  const b = frames - 1;
+  let on = false;
+  showCell(row, b);
+  frameTimer = window.setInterval(() => {
+    on = !on;
+    showCell(row, on ? a : b);
+  }, BREATH_FRAME_MS);
+}
 
 // ── State controller — priority: one-shot > thinking > ambient(petState) ─────
 let ambientRow = MAP.petStateToRow["resting"];
@@ -133,11 +152,16 @@ let overriding = false;
 
 // Ambient = play one gentle cycle, hold the settled frame, then re-animate once
 // every IDLE_REANIM_MS. A desktop pet should mostly rest still, not loop forever.
+function settleBreathe(row: number) {
+  if (!overriding && !thinking && ambientRow === row) breathe(row);
+}
 function startAmbient() {
   clearIdle();
-  playCycle(ambientRow, AMBIENT_CYCLE_MS);
+  playCycle(ambientRow, AMBIENT_CYCLE_MS, () => settleBreathe(ambientRow));
   const tick = () => {
-    if (!overriding && !thinking) playCycle(ambientRow, AMBIENT_CYCLE_MS);
+    if (!overriding && !thinking) {
+      playCycle(ambientRow, AMBIENT_CYCLE_MS, () => settleBreathe(ambientRow));
+    }
     idleTimer = window.setTimeout(tick, IDLE_REANIM_MS);
   };
   idleTimer = window.setTimeout(tick, IDLE_REANIM_MS);
@@ -270,25 +294,73 @@ async function askHermes(question: string) {
   }
 }
 
-// ── Drag (hold+move) vs click (open chat) ────────────────────────────────────
+// ── Drag = walk (running-left/right by direction) + move the window ───────────
 const appWindow = getCurrentWindow();
 let downX = 0;
 let downY = 0;
-let dragged = false;
+let dragged = false; // a drag happened → suppress the click that follows
+let walking = false; // currently being dragged
+let walkRow = -1;
+let lastWinX: number | null = null;
+let walkStopTimer: number | undefined;
+
+function startWalk(toRight: boolean) {
+  const id = toRight ? "running-right" : "running-left";
+  if (!(id in ROW_BY_ID)) return;
+  const row = ROW_BY_ID[id].row;
+  if (row === walkRow) return; // already walking this way
+  walkRow = row;
+  overriding = true; // walking overrides ambient + poll
+  clearIdle();
+  playLoop(row, ONESHOT_CYCLE_MS);
+}
+function endWalk() {
+  if (!walking) return;
+  walking = false;
+  walkRow = -1;
+  lastWinX = null;
+  if (walkStopTimer !== undefined) {
+    clearTimeout(walkStopTimer);
+    walkStopTimer = undefined;
+  }
+  overriding = false;
+  resolve(); // stop walking → back to the current petState
+}
+
 pet.addEventListener("mousedown", (e) => {
   downX = e.clientX;
   downY = e.clientY;
   dragged = false;
 });
 pet.addEventListener("mousemove", (e) => {
-  if (e.buttons !== 1 || dragged) return;
+  if (e.buttons !== 1 || walking) return;
   if (Math.abs(e.clientX - downX) > 4 || Math.abs(e.clientY - downY) > 4) {
     dragged = true;
-    void appWindow.startDragging();
+    walking = true;
+    startWalk(e.clientX - downX >= 0); // initial facing
+    void appWindow.startDragging(); // OS handles the smooth window move
   }
 });
+// While the OS moves the window, use its position to face the travel direction
+// and to detect when the drag stops (no move for a moment = released).
+void appWindow.onMoved(({ payload }) => {
+  if (!walking) return;
+  if (lastWinX !== null) {
+    const dx = payload.x - lastWinX;
+    if (Math.abs(dx) > 2) startWalk(dx >= 0);
+  }
+  lastWinX = payload.x;
+  if (walkStopTimer !== undefined) clearTimeout(walkStopTimer);
+  walkStopTimer = window.setTimeout(endWalk, 220);
+});
+window.addEventListener("mouseup", () => {
+  if (walking) endWalk(); // backup end-of-drag signal
+});
 pet.addEventListener("click", () => {
-  if (dragged) return;
+  if (dragged) {
+    dragged = false;
+    return;
+  }
   chatForm.classList.toggle("hidden");
   if (!chatForm.classList.contains("hidden")) chatInput.focus();
 });

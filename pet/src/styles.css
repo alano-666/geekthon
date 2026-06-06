@@ -22,8 +22,9 @@ body {
 }
 
 #pet {
-  width: 134px;
-  height: auto; /* preserve the Hello Kitty aspect ratio (head + body) */
+  /* width/height + background set by main.ts from the atlas geometry (state map) */
+  background-repeat: no-repeat;
+  image-rendering: auto;
   cursor: grab;
   -webkit-user-drag: none;
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.25));

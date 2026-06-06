@@ -1,39 +1,139 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { fetch } from "@tauri-apps/plugin-http";
+import atlasUrl from "./assets/pets/bow-kitty-contract-16/bow-kitty-contract-16.webp";
+import rawMap from "./assets/pets/bow-kitty-contract-16/contract-state-map.json";
 
-// All requests go through the Tauri http plugin (Rust side), so there is no
-// browser CORS to worry about for either the mock service or Hermes.
+// ── Atlas / state map = single source of truth ───────────────────────────────
+// Row numbers, frame counts and loop flags all come from contract-state-map.json.
+// We never hardcode row numbers in the component logic.
+interface RowDef {
+  row: number;
+  id: string;
+  frames: number;
+  loop: boolean;
+  type: string;
+}
+interface StateMap {
+  columns: number;
+  rows: number;
+  cellWidth: number;
+  cellHeight: number;
+  width: number;
+  height: number;
+  rowOrder: RowDef[];
+  petStateToRow: Record<string, number>;
+  oneShotRows: Record<string, number>;
+}
+const MAP = rawMap as unknown as StateMap;
+
+const ROW_BY_ID: Record<string, RowDef> = {};
+const FRAMES_BY_ROW: Record<number, number> = {};
+for (const r of MAP.rowOrder) {
+  ROW_BY_ID[r.id] = r;
+  FRAMES_BY_ROW[r.row] = r.frames;
+}
+
+const FRAME_MS = 130; // per-frame duration (no per-frame timing in the map)
+const DISPLAY_H = 150; // on-screen height of one cell (px)
+
+// ── Endpoints (all via Tauri http plugin → no browser CORS) ──────────────────
 const MOCK_TODAY = "http://localhost:4100/scores/today";
 const HERMES_CHAT = "http://localhost:8642/v1/chat/completions";
 const HERMES_KEY = "change-me-local-dev"; // must match Hermes API_SERVER_KEY
 const HERMES_MODEL = "hermes-agent";
 const POLL_MS = 5000;
 
-type PetState = "thriving" | "good" | "slacking" | "resting";
-const STATES: PetState[] = ["thriving", "good", "slacking", "resting"];
-const STATE_LABEL: Record<PetState, string> = {
-  thriving: "今天超棒！两项都达标 🎉",
-  good: "不错哦，达标了一项 💪",
-  slacking: "今天还没达标，加把劲～",
-  resting: "休息中… zzz",
+const STATE_LABEL: Record<string, string> = {
+  thriving: "今天超棒！全达标 🎉",
+  good: "不错哦，达标啦～ 💪",
+  slacking: "今天有点摆烂，加把劲～",
+  resting: "休息时间，晚安 zzz",
+  angry: "今天几乎没动！起来动一动！😤",
+  eyestrain: "屏幕看太久啦，歇会儿眼睛 😵",
+  sick: "有点不舒服…注意身体 🤒",
 };
 
-const petImg = document.getElementById("pet") as HTMLImageElement;
+const pet = document.getElementById("pet") as HTMLDivElement;
 const bubble = document.getElementById("bubble") as HTMLDivElement;
 const chatForm = document.getElementById("chat") as HTMLFormElement;
 const chatInput = document.getElementById("chat-input") as HTMLInputElement;
 
-let lastState: PetState | undefined;
+// ── Sprite animator: plays one atlas row left→right ──────────────────────────
+const scale = DISPLAY_H / MAP.cellHeight;
+pet.style.width = `${MAP.cellWidth * scale}px`;
+pet.style.height = `${MAP.cellHeight * scale}px`;
+pet.style.backgroundImage = `url(${atlasUrl})`;
+pet.style.backgroundSize = `${MAP.width * scale}px ${MAP.height * scale}px`;
+
+let frameTimer: number | undefined;
+function stopAnim() {
+  if (frameTimer !== undefined) {
+    clearInterval(frameTimer);
+    frameTimer = undefined;
+  }
+}
+function showCell(row: number, col: number) {
+  pet.style.backgroundPosition = `-${col * MAP.cellWidth * scale}px -${
+    row * MAP.cellHeight * scale
+  }px`;
+}
+function playRow(row: number, loop: boolean, onDone?: () => void) {
+  stopAnim();
+  const frames = FRAMES_BY_ROW[row] || 1; // only real frames — never the blank trailing cells
+  let i = 0;
+  showCell(row, 0);
+  if (frames <= 1) {
+    if (!loop) onDone?.();
+    return;
+  }
+  frameTimer = window.setInterval(() => {
+    i += 1;
+    if (i >= frames) {
+      if (loop) {
+        i = 0;
+      } else {
+        stopAnim();
+        onDone?.();
+        return;
+      }
+    }
+    showCell(row, i);
+  }, FRAME_MS);
+}
+
+// ── State controller — priority: one-shot > thinking > ambient(petState) ─────
+let ambientRow = MAP.petStateToRow["resting"];
+let thinking = false;
+let overriding = false;
+
+function resolve() {
+  if (overriding) return; // a one-shot is playing; it resolves on its own onDone
+  if (thinking) {
+    playRow(ROW_BY_ID["review"].row, true);
+    return;
+  }
+  playRow(ambientRow, true);
+}
+function setPetState(s: string) {
+  if (!(s in MAP.petStateToRow)) return;
+  ambientRow = MAP.petStateToRow[s];
+  if (!overriding && !thinking) resolve();
+}
+function playOnce(id: string) {
+  if (!(id in ROW_BY_ID)) return;
+  overriding = true;
+  playRow(ROW_BY_ID[id].row, false, () => {
+    overriding = false;
+    resolve(); // back to current petState (or thinking) row
+  });
+}
+function setThinking(on: boolean) {
+  thinking = on;
+  if (!overriding) resolve();
+}
+
+// ── Bubble ───────────────────────────────────────────────────────────────────
 let bubbleTimer: number | undefined;
-
-function isPetState(s: unknown): s is PetState {
-  return typeof s === "string" && (STATES as string[]).includes(s);
-}
-
-function setPet(state: PetState) {
-  petImg.src = `/cats/${state}.svg`;
-}
-
 function showBubble(text: string, autoHideMs = 4000) {
   bubble.textContent = text;
   bubble.classList.remove("hidden");
@@ -49,26 +149,57 @@ function showBubble(text: string, autoHideMs = 4000) {
   }
 }
 
-// Poll the scores service; the pet's expression is driven by petState, which the
-// scoring service computes by RULE (docs/CONTRACT.md §3.3). The pet only maps
-// state → picture; it never derives state itself.
+// ── Poll scores → petState; achievements diff → celebrate; bad data → alert ──
+let lastState: string | undefined;
+let lastAchievements: string[] = [];
+let primed = false;
+
 async function pollScores() {
+  let data: { petState?: unknown; achievements?: unknown } = {};
   try {
     const res = await fetch(MOCK_TODAY, { method: "GET" });
-    if (!res.ok) return;
-    const data = (await res.json()) as { petState?: string };
-    if (!isPetState(data.petState)) return;
-    setPet(data.petState);
-    if (data.petState !== lastState) {
-      lastState = data.petState;
-      showBubble(STATE_LABEL[data.petState]); // auto-bubble on state change
-    }
+    if (!res.ok) return; // transient — keep last expression
+    data = (await res.json()) as { petState?: unknown; achievements?: unknown };
   } catch {
-    // scores service (:4100) offline — keep the last expression
+    return; // :4100 offline — keep last expression (not a data anomaly)
+  }
+
+  const s = data.petState;
+  if (typeof s !== "string" || !(s in MAP.petStateToRow)) {
+    playOnce("alert"); // data anomaly: invalid/unknown petState
+    return;
+  }
+
+  const ach = Array.isArray(data.achievements)
+    ? (data.achievements as string[])
+    : [];
+
+  if (!primed) {
+    // first successful poll = baseline; don't celebrate pre-existing achievements
+    primed = true;
+    lastAchievements = ach;
+    lastState = s;
+    setPetState(s);
+    return;
+  }
+
+  const fresh = ach.filter((k) => !lastAchievements.includes(k));
+  lastAchievements = ach;
+
+  setPetState(s);
+  if (s !== lastState) {
+    lastState = s;
+    showBubble(STATE_LABEL[s] ?? s); // auto-bubble on state change
+  }
+  if (fresh.length > 0) {
+    showBubble(`成就达成：${fresh.join(" · ")} 🎉`, 6000);
+    playOnce("celebrate"); // one celebrate even if several unlocked at once
   }
 }
 
+// ── Chat with Hermes (thinking→review, reply→waving) ─────────────────────────
 async function askHermes(question: string) {
+  setThinking(true);
   showBubble("思考中…", 0);
   try {
     const res = await fetch(HERMES_CHAT, {
@@ -82,47 +213,45 @@ async function askHermes(question: string) {
         messages: [{ role: "user", content: question }],
       }),
     });
+    setThinking(false);
     if (!res.ok) {
       showBubble(`Hermes 出错了（HTTP ${res.status}）`, 6000);
       return;
     }
-    const data = (await res.json()) as {
+    const d = (await res.json()) as {
       choices?: { message?: { content?: string } }[];
     };
-    const reply = data.choices?.[0]?.message?.content?.trim();
+    const reply = d.choices?.[0]?.message?.content?.trim();
+    playOnce("waving");
     showBubble(reply || "（没有回复）", 9000);
   } catch {
+    setThinking(false);
     showBubble("连不上 Hermes —— :8642 的 API server 开了吗？", 6000);
   }
 }
 
-// ── click vs drag on the cat ──────────────────────────────────────────────────
-// Hold-and-move drags the pet around the desktop; a plain click opens the chat.
+// ── Drag (hold+move) vs click (open chat) ────────────────────────────────────
 const appWindow = getCurrentWindow();
 let downX = 0;
 let downY = 0;
 let dragged = false;
-
-petImg.addEventListener("mousedown", (e) => {
+pet.addEventListener("mousedown", (e) => {
   downX = e.clientX;
   downY = e.clientY;
   dragged = false;
 });
-petImg.addEventListener("mousemove", (e) => {
+pet.addEventListener("mousemove", (e) => {
   if (e.buttons !== 1 || dragged) return;
   if (Math.abs(e.clientX - downX) > 4 || Math.abs(e.clientY - downY) > 4) {
     dragged = true;
     void appWindow.startDragging();
   }
 });
-petImg.addEventListener("click", () => {
-  if (dragged) return; // it was a drag, not a click
+pet.addEventListener("click", () => {
+  if (dragged) return;
   chatForm.classList.toggle("hidden");
-  if (!chatForm.classList.contains("hidden")) {
-    chatInput.focus();
-  }
+  if (!chatForm.classList.contains("hidden")) chatInput.focus();
 });
-
 chatForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const q = chatInput.value.trim();
@@ -132,7 +261,7 @@ chatForm.addEventListener("submit", (e) => {
   void askHermes(q);
 });
 
-// ── boot ──────────────────────────────────────────────────────────────────────
-setPet("resting");
+// ── Boot ─────────────────────────────────────────────────────────────────────
+resolve(); // start on ambient (resting) until the first poll arrives
 void pollScores();
 setInterval(() => void pollScores(), POLL_MS);

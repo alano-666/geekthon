@@ -2,6 +2,8 @@
   "date": "2026-06-06",
   "exercise": { "value": 0.8, "goalMet": false },
   "reading": { "value": 1.0, "goalMet": true },
+  "screen": { "value": 1.0, "goalMet": true },
   "petState": "good",
+  "achievements": ["reading_2h"],
   "updatedAt": "2026-06-06T09:00:00Z"
 }

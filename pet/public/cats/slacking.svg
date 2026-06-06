@@ -1,30 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
-  <!-- state: slacking — no goals met, down -->
-  <!-- ears (slightly droopy) -->
-  <path d="M30 44 L36 16 L57 38 Z" fill="#fff" stroke="#3a3a3a" stroke-width="2"/>
-  <path d="M90 44 L84 16 L63 38 Z" fill="#fff" stroke="#3a3a3a" stroke-width="2"/>
-  <path d="M37 37 L39 25 L48 36 Z" fill="#ffc0cb"/>
-  <path d="M83 37 L81 25 L72 36 Z" fill="#ffc0cb"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 168" width="150" height="168">
+  <!-- Hello Kitty · slacking (no goals met) — teary -->
+  <!-- body -->
+  <path d="M50 108 Q75 100 100 108 L104 168 L46 168 Z" fill="#ffb6cf" stroke="#2b2b2b" stroke-width="3.2" stroke-linejoin="round"/>
+  <path d="M60 110 L57 134" fill="none" stroke="#2b2b2b" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M90 110 L93 134" fill="none" stroke="#2b2b2b" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="61" cy="132" r="3.4" fill="#fff" stroke="#2b2b2b" stroke-width="1.6"/>
+  <circle cx="89" cy="132" r="3.4" fill="#fff" stroke="#2b2b2b" stroke-width="1.6"/>
+  <ellipse cx="46" cy="116" rx="10" ry="8" fill="#fff" stroke="#2b2b2b" stroke-width="3"/>
+  <ellipse cx="104" cy="116" rx="10" ry="8" fill="#fff" stroke="#2b2b2b" stroke-width="3"/>
+  <!-- ears -->
+  <path d="M40 56 L33 24 L64 46 Z" fill="#fff" stroke="#2b2b2b" stroke-width="3.4" stroke-linejoin="round"/>
+  <path d="M110 56 L117 24 L86 46 Z" fill="#fff" stroke="#2b2b2b" stroke-width="3.4" stroke-linejoin="round"/>
+  <!-- head -->
+  <ellipse cx="75" cy="66" rx="46" ry="37" fill="#fff" stroke="#2b2b2b" stroke-width="3.6"/>
   <!-- bow -->
-  <g transform="translate(83,32)">
-    <path d="M0 0 L-11 -7 L-11 7 Z" fill="#ff5a7a"/>
-    <path d="M0 0 L11 -7 L11 7 Z" fill="#ff5a7a"/>
-    <circle r="3.2" fill="#ff3e63"/>
+  <g transform="translate(103,29)" stroke="#2b2b2b" stroke-width="2.6" stroke-linejoin="round">
+    <path d="M0 0 L-17 -11 Q-21 0 -17 11 Z" fill="#ff9bbb"/>
+    <path d="M0 0 L17 -11 Q21 0 17 11 Z" fill="#ff9bbb"/>
+    <circle r="5.2" fill="#ff7da6"/>
   </g>
-  <!-- face -->
-  <ellipse cx="60" cy="66" rx="35" ry="31" fill="#fff" stroke="#3a3a3a" stroke-width="2"/>
-  <!-- droopy sad eyes -->
-  <path d="M44 60 q6 6 13 2" fill="none" stroke="#3a3a3a" stroke-width="3.2" stroke-linecap="round"/>
-  <path d="M63 62 q7 -4 13 -2" fill="none" stroke="#3a3a3a" stroke-width="3.2" stroke-linecap="round"/>
-  <!-- sweat drop -->
-  <path d="M86 52 q4 6 0 9 q-4 -3 0 -9z" fill="#7ec8ff" stroke="#5aa6e0" stroke-width="1"/>
-  <!-- nose -->
-  <path d="M57 72 h6 l-3 3.5 z" fill="#ffb347"/>
-  <!-- frown -->
-  <path d="M52 82 q8 -7 16 0" fill="none" stroke="#3a3a3a" stroke-width="3" stroke-linecap="round"/>
   <!-- whiskers -->
-  <g stroke="#b6b6b6" stroke-width="1.6" stroke-linecap="round">
-    <line x1="20" y1="70" x2="39" y2="71"/><line x1="20" y1="78" x2="39" y2="77"/>
-    <line x1="100" y1="70" x2="81" y2="71"/><line x1="100" y1="78" x2="81" y2="77"/>
+  <g stroke="#2b2b2b" stroke-width="2.4" stroke-linecap="round">
+    <line x1="33" y1="62" x2="8" y2="60"/>
+    <line x1="31" y1="72" x2="5" y2="72"/>
+    <line x1="33" y1="82" x2="8" y2="84"/>
+    <line x1="117" y1="62" x2="142" y2="60"/>
+    <line x1="119" y1="72" x2="145" y2="72"/>
+    <line x1="117" y1="82" x2="142" y2="84"/>
   </g>
+  <!-- nose -->
+  <ellipse cx="75" cy="80" rx="6" ry="4" fill="#ffcf4a" stroke="#e0a93b" stroke-width="1"/>
+  <!-- downcast eyes -->
+  <ellipse cx="59" cy="76" rx="5.4" ry="7" fill="#2b2b2b"/>
+  <ellipse cx="91" cy="76" rx="5.4" ry="7" fill="#2b2b2b"/>
+  <circle cx="60" cy="79" r="1.5" fill="#fff"/>
+  <circle cx="92" cy="79" r="1.5" fill="#fff"/>
+  <!-- teardrop -->
+  <path d="M91 85 q5.5 8 0 13 q-5.5 -5 0 -13z" fill="#7ec8ff" stroke="#5aa6e0" stroke-width="1.2"/>
 </svg>

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "mock": "ts-node mock/server.ts",
-    "mcp": "ts-node mcp/server.ts",
+    "mcp": "tsx mcp/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -18,6 +18,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   },
   "dependencies": {

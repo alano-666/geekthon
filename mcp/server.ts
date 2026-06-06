@@ -2,6 +2,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 
+// stdout is reserved exclusively for the JSON-RPC stream the MCP client parses.
+// A single stray write to stdout — ours or a dependency's console.log — corrupts
+// the framing and drops the connection. Pin console.log to stderr so it can never
+// pollute the protocol. All of our own logging already uses console.error.
+console.log = console.error;
+
 const MOCK_BASE = 'http://localhost:4100';
 
 const server = new McpServer({ name: 'scores-mcp', version: '1.0.0' });

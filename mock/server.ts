@@ -1,8 +1,22 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import type { Scores, PetState, MetricScore } from '../types/contract';
 
 const app = express();
 app.use(express.json());
+
+// CORS: allow the AIRI web pet (a different origin, e.g. http://localhost:5173)
+// to poll this service from the browser. Read-only mock data, so a permissive
+// policy is fine for the MVP.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+});
 
 // In-memory store keyed by "YYYY-MM-DD"
 const store = new Map<string, Scores>();

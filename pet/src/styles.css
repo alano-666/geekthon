@@ -1,0 +1,86 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: transparent; /* transparent pet window */
+  overflow: hidden;
+  font-family: -apple-system, "PingFang SC", system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#pet-root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end; /* pet sits at the bottom, bubble/chat float above */
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+#pet {
+  width: 120px;
+  height: 120px;
+  cursor: grab;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.25));
+  transition: transform 0.15s ease;
+}
+#pet:hover {
+  transform: translateY(-2px) scale(1.03);
+}
+#pet:active {
+  cursor: grabbing;
+}
+
+#bubble,
+#chat {
+  max-width: 240px;
+  width: max-content;
+  background: rgba(255, 255, 255, 0.97);
+  color: #222;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+#bubble {
+  position: relative;
+  max-height: 190px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* little tail pointing down toward the pet */
+#bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-bottom: 0;
+  border-top-color: rgba(255, 255, 255, 0.97);
+}
+
+#chat {
+  padding: 6px 10px;
+}
+#chat-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  width: 200px;
+  color: #222;
+}
+
+.hidden {
+  display: none !important;
+}

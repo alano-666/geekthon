@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- state: good — one goal met, content -->
+  <!-- ears -->
+  <path d="M30 42 L40 14 L58 37 Z" fill="#fff" stroke="#3a3a3a" stroke-width="2"/>
+  <path d="M90 42 L80 14 L62 37 Z" fill="#fff" stroke="#3a3a3a" stroke-width="2"/>
+  <path d="M37 35 L41 23 L49 34 Z" fill="#ffc0cb"/>
+  <path d="M83 35 L79 23 L71 34 Z" fill="#ffc0cb"/>
+  <!-- bow -->
+  <g transform="translate(83,30)">
+    <path d="M0 0 L-11 -7 L-11 7 Z" fill="#ff5a7a"/>
+    <path d="M0 0 L11 -7 L11 7 Z" fill="#ff5a7a"/>
+    <circle r="3.2" fill="#ff3e63"/>
+  </g>
+  <!-- face -->
+  <ellipse cx="60" cy="66" rx="35" ry="31" fill="#fff" stroke="#3a3a3a" stroke-width="2"/>
+  <!-- calm open eyes -->
+  <circle cx="50" cy="62" r="3.6" fill="#3a3a3a"/>
+  <circle cx="70" cy="62" r="3.6" fill="#3a3a3a"/>
+  <circle cx="51.2" cy="60.8" r="1.1" fill="#fff"/>
+  <circle cx="71.2" cy="60.8" r="1.1" fill="#fff"/>
+  <!-- blush -->
+  <ellipse cx="40" cy="74" rx="5" ry="3" fill="#ffd0d8"/>
+  <ellipse cx="80" cy="74" rx="5" ry="3" fill="#ffd0d8"/>
+  <!-- nose -->
+  <path d="M57 71 h6 l-3 3.5 z" fill="#ffb347"/>
+  <!-- gentle smile -->
+  <path d="M52 77 q8 7 16 0" fill="none" stroke="#3a3a3a" stroke-width="3" stroke-linecap="round"/>
+  <!-- whiskers -->
+  <g stroke="#b6b6b6" stroke-width="1.6" stroke-linecap="round">
+    <line x1="20" y1="68" x2="39" y2="70"/><line x1="20" y1="76" x2="39" y2="76"/>
+    <line x1="100" y1="68" x2="81" y2="70"/><line x1="100" y1="76" x2="81" y2="76"/>
+  </g>
+</svg>

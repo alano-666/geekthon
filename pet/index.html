@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pet</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+  <body>
+    <div id="pet-root">
+      <div id="bubble" class="hidden"></div>
+      <form id="chat" class="hidden" autocomplete="off">
+        <input id="chat-input" placeholder="问问我…（回车发送）" />
+      </form>
+      <img id="pet" src="/cats/resting.svg" alt="pet" draggable="false" />
+    </div>
+  </body>
+</html>

@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { readFile } from "node:fs/promises";
 
 // stdout is reserved for the JSON-RPC stream; route stray logs to stderr.
 console.log = console.error;
@@ -22,6 +23,16 @@ function jsonText(o: unknown) {
 }
 function errText(m: string) {
   return { content: [{ type: "text" as const, text: m }], isError: true };
+}
+
+// Real health/screen come from the health-dashboard's processed JSON files
+// (already collected on this Mac: Apple Health autosync + frontmost-app screen
+// sampler). We read the files directly — robust, and no PII leaves the machine.
+const HEALTH_DIR =
+  process.env.HEALTH_DIR || `${process.env.HOME}/Documents/黑客松/data/processed`;
+async function readProcessed(name: string): Promise<Record<string, unknown>> {
+  const txt = await readFile(`${HEALTH_DIR}/${name}`, "utf8");
+  return JSON.parse(txt) as Record<string, unknown>;
 }
 
 // ── Weather (Open-Meteo · free · no key) ─────────────────────────────────────
@@ -120,6 +131,66 @@ server.registerTool(
       });
     } catch (e) {
       return errText(`weread exec error: ${String(e)}`);
+    }
+  },
+);
+
+// ── Screen time (frontmost-app sampler → processed JSON) ─────────────────────
+server.registerTool(
+  "get_screen_today",
+  {
+    description:
+      "今日屏幕使用时长（分钟）与占用最多的 App（本机前台采样，实时）。" +
+      "用户问看了多久屏幕/在用什么 App/是不是看太久了时调用。",
+    annotations: { readOnlyHint: true, destructiveHint: false },
+  },
+  async () => {
+    try {
+      const d = (await readProcessed("screen-time-latest.json")) as {
+        date?: string; totalMinutes?: number;
+        apps?: { appName?: string; durationMinutes?: number }[];
+      };
+      const apps = Array.isArray(d.apps)
+        ? d.apps.slice(0, 5).map((a) => ({ app: a.appName, minutes: a.durationMinutes }))
+        : [];
+      return jsonText({ date: d.date, total_minutes: d.totalMinutes, top_apps: apps });
+    } catch (e) {
+      return errText(`screen read error: ${String(e)}`);
+    }
+  },
+);
+
+// ── Health (Apple Health auto-export → processed JSON) ───────────────────────
+server.registerTool(
+  "get_health_today",
+  {
+    description:
+      "今日健康数据：步数(及目标)、距离、活动能量、运动/站立分钟、心率、静息心率（Apple Health 自动导出）。" +
+      "用户问步数/走了多少/运动了吗/心率/今天动得够不够时调用。",
+    annotations: { readOnlyHint: true, destructiveHint: false },
+  },
+  async () => {
+    try {
+      const d = (await readProcessed("today-health-latest.json")) as {
+        date?: string;
+        metrics?: Record<string, Record<string, number | null>>;
+      };
+      const m = d.metrics ?? {};
+      const g = (k: string, f: string) => m[k]?.[f] ?? null;
+      return jsonText({
+        date: d.date,
+        steps: g("steps", "value"),
+        steps_goal: g("steps", "goal"),
+        distance_km: g("walkingRunningDistance", "valueKm"),
+        active_energy_kcal: g("activeEnergy", "valueKcal"),
+        exercise_minutes: g("exerciseTime", "valueMinutes"),
+        stand_minutes: g("standTime", "valueMinutes"),
+        heart_rate_avg: g("heartRate", "avg"),
+        heart_rate_latest: g("heartRate", "latest"),
+        resting_heart_rate: g("restingHeartRate", "avg") ?? g("restingHeartRate", "latest"),
+      });
+    } catch (e) {
+      return errText(`health read error: ${String(e)}`);
     }
   },
 );

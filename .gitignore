@@ -13,3 +13,8 @@ dist/
 # Env / secrets
 .env
 .env.local
+
+# Personal / local-only
+.claude/
+finance-tracker/data.json
+todo-calendar/finance-data.json

@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import type { Scores, PetState, MetricScore } from '../types/contract';
+import { execFile } from 'node:child_process';
 
 const app = express();
 app.use(express.json());
@@ -225,6 +226,26 @@ app.post("/activity", (_req: Request, res: Response) => {
 });
 app.get("/activity", (_req: Request, res: Response) => {
   res.json({ msAgo: lastActiveAt ? Date.now() - lastActiveAt : null });
+});
+
+// ── mirror desktop-pet chats into Feishu (so the full context shows there too) ─
+const HERMES_BIN = process.env.HERMES_BIN || `${process.env.HOME}/.local/bin/hermes`;
+app.post('/mirror', (req: Request, res: Response) => {
+  const q = typeof req.body?.q === 'string' ? req.body.q : '';
+  const r = typeof req.body?.r === 'string' ? req.body.r : '';
+  if (!q) {
+    res.status(400).json({ ok: false, error: 'missing q' });
+    return;
+  }
+  const text = `🖥️ 桌宠对话\n你：${q}` + (r ? `\n\n麦麦：${r}` : '');
+  execFile(HERMES_BIN, ['send', '--to', 'feishu', '--quiet', text], { timeout: 15000 }, (err) => {
+    if (err) {
+      console.error('mirror→feishu failed:', err.message);
+      res.status(500).json({ ok: false });
+      return;
+    }
+    res.json({ ok: true });
+  });
 });
 
 // ── start ─────────────────────────────────────────────────────────────────────

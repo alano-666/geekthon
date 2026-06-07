@@ -45,8 +45,12 @@ const MOCK_TODAY = "http://localhost:4100/scores/today";
 const HERMES_CHAT = "http://localhost:8642/v1/chat/completions";
 const HERMES_KEY = "change-me-local-dev"; // must match Hermes API_SERVER_KEY
 const HERMES_MODEL = "hermes-agent";
+// Use the Feishu DM's scope (= your Feishu open_id) as the session key, so the
+// desktop pet and the Feishu bot share one conversation scope → 上下文连续。
+const HERMES_SESSION_KEY = "ou_7914fc617e3e293bd81e48ad010191a5";
 const POLL_MS = 5000;
 const ACTIVITY = "http://localhost:4100/activity";
+const MIRROR = "http://localhost:4100/mirror"; // mirror pet chats into Feishu
 const ACTIVITY_POLL_MS = 2000; // how often the pet checks if the agent is active
 const ACTIVITY_WINDOW_MS = 8000; // treat agent as "talking" if pinged within this window
 const WORKBENCH_URL = "http://localhost:4173"; // 双击菜单「打开工作台」默认指向健康看板
@@ -376,6 +380,20 @@ type ChatMsg = { role: "user" | "assistant"; content: string };
 const chatHistory: ChatMsg[] = [];
 const MAX_HISTORY = 8;
 
+// Mirror a desktop-pet exchange into the Feishu chat (best-effort) so the full
+// context is visible there too.
+async function mirrorToFeishu(q: string, r: string) {
+  try {
+    await fetch(MIRROR, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ q, r }),
+    });
+  } catch {
+    // non-critical
+  }
+}
+
 async function askHermes(question: string) {
   setThinking(true);
   showBubble("思考中…", 0);
@@ -385,6 +403,7 @@ async function askHermes(question: string) {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${HERMES_KEY}`,
+        "X-Hermes-Session-Key": HERMES_SESSION_KEY, // share scope with the Feishu DM
       },
       body: JSON.stringify({
         model: HERMES_MODEL,
@@ -414,6 +433,7 @@ async function askHermes(question: string) {
       if (chatHistory.length > MAX_HISTORY) {
         chatHistory.splice(0, chatHistory.length - MAX_HISTORY);
       }
+      void mirrorToFeishu(question, reply); // show this exchange in Feishu too
     }
   } catch {
     setThinking(false);

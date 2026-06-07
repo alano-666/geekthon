@@ -159,7 +159,7 @@ function breathe(row: number) {
 }
 
 // ── State controller — priority: one-shot > thinking > ambient(petState) ─────
-let ambientRow = MAP.petStateToRow["resting"];
+let ambientRow = MAP.petStateToRow["good"] ?? MAP.petStateToRow["resting"];
 let thinking = false;
 let overriding = false;
 let agentActive = false; // Hermes is replying on some channel (Feishu/box/CLI) → pet "talks"
@@ -394,50 +394,65 @@ async function mirrorToFeishu(q: string, r: string) {
   }
 }
 
+const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 async function askHermes(question: string) {
   setThinking(true);
   showBubble("思考中…", 0);
-  try {
-    const res = await fetch(HERMES_CHAT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${HERMES_KEY}`,
-        "X-Hermes-Session-Key": HERMES_SESSION_KEY, // share scope with the Feishu DM
-      },
-      body: JSON.stringify({
-        model: HERMES_MODEL,
-        messages: [
-          { role: "system", content: personaPrompt() },
-          ...chatHistory.slice(-MAX_HISTORY),
+  const MAX_TRIES = 3; // DeepSeek occasionally 503s on the big (~18k token) request
+  for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
+    try {
+      const res = await fetch(HERMES_CHAT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${HERMES_KEY}`,
+          "X-Hermes-Session-Key": HERMES_SESSION_KEY, // share scope with the Feishu DM
+        },
+        body: JSON.stringify({
+          model: HERMES_MODEL,
+          messages: [
+            { role: "system", content: personaPrompt() },
+            ...chatHistory.slice(-MAX_HISTORY),
+            { role: "user", content: question },
+          ],
+        }),
+      });
+      if (!res.ok) {
+        if (res.status >= 500 && attempt < MAX_TRIES) {
+          await sleep(700 * attempt); // transient 5xx → back off and retry
+          continue;
+        }
+        setThinking(false);
+        showBubble(`Hermes 出错了（HTTP ${res.status}）`, 6000);
+        return;
+      }
+      setThinking(false);
+      const d = (await res.json()) as {
+        choices?: { message?: { content?: string } }[];
+      };
+      const reply = d.choices?.[0]?.message?.content?.trim();
+      playOnce("waving");
+      showBubble(reply || "（没有回复）", 9000);
+      if (reply) {
+        chatHistory.push(
           { role: "user", content: question },
-        ],
-      }),
-    });
-    setThinking(false);
-    if (!res.ok) {
-      showBubble(`Hermes 出错了（HTTP ${res.status}）`, 6000);
+          { role: "assistant", content: reply },
+        );
+        if (chatHistory.length > MAX_HISTORY) {
+          chatHistory.splice(0, chatHistory.length - MAX_HISTORY);
+        }
+        void mirrorToFeishu(question, reply); // show this exchange in Feishu too
+      }
+      return;
+    } catch {
+      if (attempt < MAX_TRIES) {
+        await sleep(700 * attempt); // network hiccup → retry
+        continue;
+      }
+      setThinking(false);
+      showBubble("连不上 Hermes —— :8642 的 API server 开了吗？", 6000);
       return;
     }
-    const d = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const reply = d.choices?.[0]?.message?.content?.trim();
-    playOnce("waving");
-    showBubble(reply || "（没有回复）", 9000);
-    if (reply) {
-      chatHistory.push(
-        { role: "user", content: question },
-        { role: "assistant", content: reply },
-      );
-      if (chatHistory.length > MAX_HISTORY) {
-        chatHistory.splice(0, chatHistory.length - MAX_HISTORY);
-      }
-      void mirrorToFeishu(question, reply); // show this exchange in Feishu too
-    }
-  } catch {
-    setThinking(false);
-    showBubble("连不上 Hermes —— :8642 的 API server 开了吗？", 6000);
   }
 }
 
@@ -510,6 +525,21 @@ function toggleMenu() {
   }
 }
 
+// ── Easter egg: triple-click → a little party (temporary celebrate state) ────
+const EGG_LINES = [
+  "🥚 哇！你连戳我三下，彩蛋出现啦～",
+  "(✧ω✧) 三连击！奖励你看我蹦一个！",
+  "喵呜——再戳就要收费咯 😼",
+  "🎉 隐藏成就解锁：手速达人！",
+  "别戳啦别戳啦，痒痒～ 🐾",
+];
+function easterEgg() {
+  hideMenu();
+  chatForm.classList.add("hidden");
+  showBubble(EGG_LINES[Math.floor(Math.random() * EGG_LINES.length)], 6000);
+  playOnce("celebrate"); // temporary one-shot → auto-reverts to current petState
+}
+
 // ── Drag = walk (running-left/right by direction) + move the window ───────────
 const appWindow = getCurrentWindow();
 let downX = 0;
@@ -572,26 +602,36 @@ void appWindow.onMoved(({ payload }) => {
 window.addEventListener("mouseup", () => {
   if (walking) endWalk(); // backup end-of-drag signal
 });
+let clickCount = 0;
 let clickTimer: number | undefined;
 pet.addEventListener("click", () => {
   if (dragged) {
     dragged = false;
     return;
   }
-  if (clickTimer !== undefined) {
-    // second click within the window → double-click → quick menu
-    clearTimeout(clickTimer);
+  clickCount++;
+  if (clickTimer !== undefined) clearTimeout(clickTimer);
+  if (clickCount >= 3) {
+    // triple-click → easter egg ✨
+    clickCount = 0;
     clickTimer = undefined;
-    toggleMenu();
+    easterEgg();
     return;
   }
   clickTimer = window.setTimeout(() => {
+    const n = clickCount;
+    clickCount = 0;
     clickTimer = undefined;
-    // single click → chat input
-    hideMenu();
-    chatForm.classList.toggle("hidden");
-    if (!chatForm.classList.contains("hidden")) chatInput.focus();
-  }, 250);
+    if (n === 1) {
+      // single click → chat input
+      hideMenu();
+      chatForm.classList.toggle("hidden");
+      if (!chatForm.classList.contains("hidden")) chatInput.focus();
+    } else if (n === 2) {
+      // double click → quick menu
+      toggleMenu();
+    }
+  }, 300);
 });
 chatForm.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -620,7 +660,7 @@ async function pollActivity() {
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 buildMenu();
-resolve(); // start on ambient (resting) until the first poll arrives
+resolve(); // start on ambient (good) until the first poll arrives
 void pollScores();
 setInterval(() => void pollScores(), POLL_MS);
 void pollActivity();

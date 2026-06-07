@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Desktop pet must keep polling/animating while in the background — disable
+       macOS App Nap so JS timers (setInterval) are not throttled when unfocused. -->
+  <key>NSAppSleepDisabled</key>
+  <true/>
+</dict>
+</plist>

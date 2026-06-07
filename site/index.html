@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Geekthon</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18201b;
+      --muted: #5b665f;
+      --line: #d8dfd9;
+      --panel: #ffffff;
+      --bg: #f5f7f2;
+      --accent: #2a7248;
+      --accent-2: #b75f2f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(42, 114, 72, 0.12), transparent 34%),
+        linear-gradient(315deg, rgba(183, 95, 47, 0.14), transparent 32%),
+        var(--bg);
+    }
+
+    main {
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 56px 0;
+    }
+
+    header {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.4rem, 6vw, 5rem);
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.65;
+      max-width: 720px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    a.card {
+      min-height: 176px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: inherit;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 16px 36px rgba(24, 32, 27, 0.08);
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    a.card:hover,
+    a.card:focus-visible {
+      outline: none;
+      transform: translateY(-2px);
+      border-color: rgba(42, 114, 72, 0.55);
+      box-shadow: 0 20px 44px rgba(24, 32, 27, 0.12);
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      font-size: 1.25rem;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .card p {
+      font-size: 0.94rem;
+      line-height: 1.55;
+    }
+
+    .tag {
+      width: max-content;
+      max-width: 100%;
+      padding: 5px 10px;
+      border-radius: 999px;
+      color: #ffffff;
+      background: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: normal;
+    }
+
+    .tag.secondary {
+      background: var(--accent-2);
+    }
+
+    footer {
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Geekthon</h1>
+      <p>Static project pages published from the GitHub repository. Pages that need local Node services or desktop Tauri APIs are linked only where their static HTML can run in a browser.</p>
+    </header>
+
+    <section class="grid" aria-label="Project pages">
+      <a class="card" href="./dashboard.html">
+        <span>
+          <h2>Wellora Dashboard</h2>
+          <p>Health and productivity dashboard page from the repository root.</p>
+        </span>
+        <span class="tag">Static HTML</span>
+      </a>
+
+      <a class="card" href="./finance-tracker/">
+        <span>
+          <h2>Finance Tracker</h2>
+          <p>Personal finance tracker. On GitHub Pages it stores data in the browser unless a local API server is running.</p>
+        </span>
+        <span class="tag">Browser Ready</span>
+      </a>
+
+      <a class="card" href="./todo-calendar/todo-calendar.html">
+        <span>
+          <h2>Todo Calendar</h2>
+          <p>Static calendar interface. Cloud sync endpoints require the Node server and are not provided by GitHub Pages.</p>
+        </span>
+        <span class="tag secondary">Frontend Only</span>
+      </a>
+    </section>
+
+    <footer>Published with GitHub Pages.</footer>
+  </main>
+</body>
+</html>
